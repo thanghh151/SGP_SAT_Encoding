@@ -341,18 +341,35 @@ public class SocialGolfer {
 
     static List<Integer>[][] processResults(List<Integer> result) {
         List<Integer>[][] ntab = new List[w + 1][g + 1];
-        for (int tyg = 1; tyg <= w; tyg++) {
-            for (int grp = 1; grp <= g; grp++) {
-                ntab[tyg][grp] = new ArrayList<>();
+    
+        for (int week = 1; week <= w; week++) {
+            for (int group = 1; group <= g; group++) {
+                ntab[week][group] = new ArrayList<>();
             }
         }
-        for (int ijkl : result) {
-            int l = (ijkl - 1) / (x * p * g) + 1;
-            int k = ((ijkl - 1) / (x * p)) % g + 1;
-            int j = ((ijkl - 1) / x) % p + 1;
-            int i = (ijkl - 1) % x + 1;
-            ntab[l][k].add(i);
+    
+        int index = 0;
+        for (int l = 1; l <= w; l++) {
+            for (int k = 1; k <= g; k++) {
+                for (int i = 1; i <= p; i++) {
+                    for (int j = 1; j <= x; j++) {
+                        if (index < result.size()) {
+                            int ijkl = result.get(index);
+                            int il = (ijkl - 1) / (x * p * g) + 1;
+                            int ik = ((ijkl - 1) / (x * p)) % g + 1;
+                            int ij = ((ijkl - 1) / x) % p + 1;
+                            int ii = (ijkl - 1) % x + 1;
+    
+                            if (il == l && ik == k && ij == i) {
+                                ntab[l][k].add(ii);
+                                index++;
+                            }
+                        }
+                    }
+                }
+            }
         }
+    
         return ntab;
     }
 
