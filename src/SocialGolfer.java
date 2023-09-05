@@ -32,6 +32,9 @@ public class SocialGolfer {
         genClause5();
         genClause6();
         genClause7();
+        genSymmetryBreakingClause1();
+        genSymmetryBreakingClause2();
+        genSymmetryBreakingClause3();
     }
 
     // Each golfer plays at least once a week
@@ -153,6 +156,54 @@ public class SocialGolfer {
                             }
                         }
                     }
+                }
+            }
+        }
+    }
+
+    // Symmetry breaking clause 1
+    static void genSymmetryBreakingClause1() {
+        for (int i = 1; i <= x; i++) {
+            for (int j = 1; j < p; j++) {
+                for (int k = 1; k <= g; k++) {
+                    for (int l = 1; l <= w; l++) {
+                        for (int m = 1; m <= i; m++) {
+                            List<Integer> loo = new ArrayList<>();
+                            loo.add(-1 * getVariable(i, j, k, l));
+                            loo.add(-1 * getVariable(m, j + 1, k, l));
+                            addClause(loo);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Symmetry breaking clause 2
+    static void genSymmetryBreakingClause2() {
+        for (int i = 1; i <= x; i++) {
+            for (int k = 1; k < g; k++) {
+                for (int l = 1; l <= w; l++) {
+                    for (int m = 1; m < i; m++) {
+                        List<Integer> loo = new ArrayList<>();
+                        loo.add(-1 * getVariable(i, 1, k, l));
+                        loo.add(-1 * getVariable(m, 1, k + 1, l));
+                        addClause(loo);
+                    }
+                }
+            }
+        }
+    }
+
+    // Symmetry breaking clause 3
+    static void genSymmetryBreakingClause3() {
+        for (int i = 1; i <= x; i++) {
+            for (int l = 1; l < w; l++) {
+                for (int m = 1; m <= i; m++) {
+                    List<Integer> loo = new ArrayList<>();
+                    loo.add(-1 * getVariable(i, 2, 1, l));
+                    loo.add(-1 * getVariable(m, 2, 1, l + 1));
+                    addClause(loo);
                 }
             }
         }
@@ -348,7 +399,8 @@ public class SocialGolfer {
         Scanner scanner = new Scanner(System.in);
         while (true) {
             try {
-                System.out.println("\nDo you want to display additional information about SAT solving (i.e., number of variables, number of clauses, propagations, conflicts, decisions, and restarts)?");
+                System.out.println(
+                        "\nDo you want to display additional information about SAT solving (i.e., number of variables, number of clauses, propagations, conflicts, decisions, and restarts)?");
                 System.out.println("1 - Yes");
                 System.out.println("2 - No");
                 int choice = Integer.parseInt(scanner.nextLine());
@@ -377,7 +429,8 @@ public class SocialGolfer {
                 System.out.println("\\------------------------------/");
                 System.out.println("1 - Solve the Social Golfer problem");
                 System.out.println("2 - Change time limit (current: " + timeBudget + "s)");
-                System.out.println("3 - Change showing additional information (current: " + (showAdditionalInfo ? "Yes" : "No") + ")");
+                System.out.println("3 - Change showing additional information (current: "
+                        + (showAdditionalInfo ? "Yes" : "No") + ")");
                 System.out.println("0 - Exit");
                 int choice = Integer.parseInt(scanner.nextLine());
                 if (choice == 1) {
