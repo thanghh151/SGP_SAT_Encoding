@@ -230,29 +230,32 @@ public class SocialGolfer {
 
     // Resolve the SAT variable to its original representation
     static int resolveVariable(int v) {
-        for (int i = 1; i <= x; i++) {
-            for (int l = 1; l <= w; l++) {
+        for (int l = 1; l <= w; l++) {
+            for (int k = 1; k <= g; k++) {
                 for (int j = 1; j <= p; j++) {
-                    for (int k = 1; k <= g; k++) {
-                        if (Math.abs(v) == getVariable(i, j, k, l)) {
-                            return i + j * x + k * x * p + l * x * p * g;
+                    for (int i = 1; i <= x; i++) {
+                        int var = getVariable(i, j, k, l);
+                        if (Math.abs(v) == var) {
+                            return i;
                         }
                     }
                 }
             }
         }
-        for (int i = 1; i <= x; i++) {
-            for (int l = 1; l <= w; l++) {
-                for (int k = 1; k <= g; k++) {
-                    if (Math.abs(v) == getVariable2(i, k, l)) {
-                        return i + k * x + l * x * g + 1 + x * p * g * w;
+        
+        for (int l = 1; l <= w; l++) {
+            for (int k = 1; k <= g; k++) {
+                for (int i = 1; i <= x; i++) {
+                    int var = getVariable2(i, k, l);
+                    if (Math.abs(v) == var) {
+                        return i;
                     }
                 }
             }
         }
+        
         return 0;
     }
-
     static long startTime;
 
     // Add a clause to the SAT solver
@@ -332,22 +335,14 @@ public class SocialGolfer {
         }
     
         int index = 0;
+    
         for (int l = 1; l <= w; l++) {
             for (int k = 1; k <= g; k++) {
                 for (int i = 1; i <= p; i++) {
-                    for (int j = 1; j <= x; j++) {
-                        if (index < result.size()) {
-                            int ijkl = result.get(index);
-                            int il = (ijkl - 1) / (x * p * g) + 1;
-                            int ik = ((ijkl - 1) / (x * p)) % g + 1;
-                            int ij = ((ijkl - 1) / x) % p + 1;
-                            int ii = (ijkl - 1) % x + 1;
-    
-                            if (il == l && ik == k && ij == i) {
-                                ntab[l][k].add(ii);
-                                index++;
-                            }
-                        }
+                    if (index < result.size()) {
+                        int player = result.get(index);
+                        ntab[l][k].add(player);
+                        index++;
                     }
                 }
             }
@@ -369,8 +364,10 @@ public class SocialGolfer {
             for (int group = 1; group <= g; group++) {
                 System.out.print("\t");
                 List<Integer> players = result[week][group];
-                String playerList = players.stream().map(Object::toString).collect(Collectors.joining(","));
-                System.out.print(playerList);
+                if (players != null) {
+                    String playerList = players.stream().map(Object::toString).collect(Collectors.joining(", "));
+                    System.out.print(playerList);
+                }
             }
             System.out.println();
         }
