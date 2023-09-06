@@ -16,7 +16,6 @@ public class SocialGolfer {
     static int x; // p * g
 
     static int timeBudget = 10;
-    static boolean showAdditionalInfo = true;
 
     static ISolver satSolver;
 
@@ -24,6 +23,7 @@ public class SocialGolfer {
         mainMenu();
     }
 
+     // Generate all the required SAT clauses
     static void genAllClauses() {
         genClause1();
         genClause2();
@@ -90,6 +90,7 @@ public class SocialGolfer {
         }
     }
 
+    // Each player plays in each group in each week
     static void genClause4() {
         for (int l = 1; l <= w; l++) {
             for (int k = 1; k <= g; k++) {
@@ -104,6 +105,7 @@ public class SocialGolfer {
         }
     }
 
+    // No player plays in the same group in the same week
     static void genClause5() {
         for (int l = 1; l <= w; l++) {
             for (int k = 1; k <= g; k++) {
@@ -121,6 +123,7 @@ public class SocialGolfer {
         }
     }
 
+    // Combine two sets of variables, ijkl and ikl
     static void genClause6() {
         for (int i = 1; i <= x; i++) {
             for (int k = 1; k <= g; k++) {
@@ -140,6 +143,7 @@ public class SocialGolfer {
         }
     }
 
+    // If two players m and n play in the same group k in week l, they cannot play together in any group together in future weeks
     static void genClause7() {
         for (int l = 1; l <= w; l++) {
             for (int k = 1; k <= g; k++) {
@@ -224,6 +228,7 @@ public class SocialGolfer {
         return i + (x * k) + (l * x * g) + 1 + (x * p * g * w);
     }
 
+    // Resolve the SAT variable to its original representation
     static int resolveVariable(int v) {
         for (int i = 1; i <= x; i++) {
             for (int l = 1; l <= w; l++) {
@@ -249,19 +254,12 @@ public class SocialGolfer {
     }
 
     static long startTime;
-    static int restarts = 0;
-    static int conflicts = 0;
-    static int decisions = 0;
-    static int propagations = 0;
 
+    // Add a clause to the SAT solver
     static void addClause(List<Integer> clause) {
         int[] array = clause.stream().mapToInt(i -> i).toArray();
         try {
             satSolver.addClause(new VecInt(array));
-            restarts++;
-            conflicts++;
-            decisions++;
-            propagations++;
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -280,16 +278,10 @@ public class SocialGolfer {
         satSolver.setTimeout(timeBudget);
         genAllClauses();
 
-        if (showAdditionalInfo) {
-            restarts = 0;
-            conflicts = 0;
-            decisions = 0;
-            propagations = 0;
-            startTime = System.currentTimeMillis();
-            System.out.println("Clauses: " + satSolver.nConstraints());
-            System.out.println("Variables: " + satSolver.nVars());
-        }
-
+        startTime = System.currentTimeMillis();
+        System.out.println("Clauses: " + satSolver.nConstraints());
+        System.out.println("Variables: " + satSolver.nVars());
+    
         System.out.println("\nSearching for a solution.");
 
         Thread timer = new Thread(() -> interrupt(satSolver));
@@ -324,21 +316,12 @@ public class SocialGolfer {
                 List<Integer>[][] finalResult = processResults(result);
                 showResults(finalResult);
 
-                if (showAdditionalInfo) {
-                    System.out.println("Restarts: " +
-                            restarts +
-                            ", conflicts: " +
-                            conflicts +
-                            ", decisions: " +
-                            decisions +
-                            ", propagations: " +
-                            propagations);
-                }
             }
             new Scanner(System.in).nextLine(); // Wait for Enter key
         }
     }
 
+    // Process the SAT solver results into a readable format
     static List<Integer>[][] processResults(List<Integer> result) {
         List<Integer>[][] ntab = new List[w + 1][g + 1];
     
@@ -373,6 +356,7 @@ public class SocialGolfer {
         return ntab;
     }
 
+    // Display the final results
     static void showResults(List<Integer>[][] result) {
         System.out.println("\nResult:");
         System.out.print("Week");
@@ -392,6 +376,7 @@ public class SocialGolfer {
         }
     }
 
+    // Change the time budget for SAT solving
     static void changeTimeBudget() {
         Scanner scanner = new Scanner(System.in);
         while (true) {
@@ -412,50 +397,21 @@ public class SocialGolfer {
         }
     }
 
-    static void changeShowingAdditionalInfo() {
-        Scanner scanner = new Scanner(System.in);
-        while (true) {
-            try {
-                System.out.println(
-                        "\nDo you want to display additional information about SAT solving (i.e., number of variables, number of clauses, propagations, conflicts, decisions, and restarts)?");
-                System.out.println("1 - Yes");
-                System.out.println("2 - No");
-                int choice = Integer.parseInt(scanner.nextLine());
-                if (choice == 1) {
-                    showAdditionalInfo = true;
-                } else if (choice == 2) {
-                    showAdditionalInfo = false;
-                } else {
-                    System.out.println("Please enter a valid value\n");
-                    continue;
-                }
-            } catch (NumberFormatException e) {
-                System.out.println("Please enter a valid value\n");
-                continue;
-            }
-            break;
-        }
-    }
-
     static void mainMenu() {
         Scanner scanner = new Scanner(System.in);
         while (true) {
             try {
-                System.out.println("\n/------------------------------\\");
+                System.out.println("\n--------------------------------");
                 System.out.println("| Social Golfer Problem Solver |");
-                System.out.println("\\------------------------------/");
+                System.out.println("--------------------------------");
                 System.out.println("1 - Solve the Social Golfer problem");
                 System.out.println("2 - Change time limit (current: " + timeBudget + "s)");
-                System.out.println("3 - Change showing additional information (current: "
-                        + (showAdditionalInfo ? "Yes" : "No") + ")");
                 System.out.println("0 - Exit");
                 int choice = Integer.parseInt(scanner.nextLine());
                 if (choice == 1) {
                     menu();
                 } else if (choice == 2) {
                     changeTimeBudget();
-                } else if (choice == 3) {
-                    changeShowingAdditionalInfo();
                 } else if (choice == 0) {
                     return;
                 }
