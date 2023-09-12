@@ -3,6 +3,8 @@ import org.sat4j.minisat.SolverFactory;
 import org.sat4j.specs.ISolver;
 import org.sat4j.specs.TimeoutException;
 
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
@@ -256,13 +258,16 @@ public class SocialGolfer {
         
         return 0;
     }
+
     static long startTime;
+    static List<List<Integer>> allClauses = new ArrayList<>();
 
     // Add a clause to the SAT solver
     static void addClause(List<Integer> clause) {
         int[] array = clause.stream().mapToInt(i -> i).toArray();
         try {
             satSolver.addClause(new VecInt(array));
+            allClauses.add(new ArrayList<>(clause));
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -318,10 +323,25 @@ public class SocialGolfer {
 
                 List<Integer>[][] finalResult = processResults(result);
                 showResults(finalResult);
-
+                
+                // Write output.cnf
+                try {
+                    FileWriter writer = new FileWriter("output.cnf");
+                    writer.write("p cnf " + satSolver.nVars() + " " + satSolver.nConstraints() + "\n");
+                    for (List<Integer> clause : allClauses) {
+                        for (int literal : clause) {
+                            writer.write(literal + " ");
+                        }
+                        writer.write("0\n");
+                    }
+                    writer.close();
+                    System.out.println("CNF written to output.cnf");
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
             }
-            new Scanner(System.in).nextLine(); // Wait for Enter key
         }
+            new Scanner(System.in).nextLine(); // Wait for Enter key
     }
 
     // Process the SAT solver results into a readable format
