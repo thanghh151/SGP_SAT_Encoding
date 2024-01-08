@@ -3,9 +3,11 @@ import org.sat4j.minisat.SolverFactory;
 import org.sat4j.specs.ISolver;
 import org.sat4j.specs.TimeoutException;
 
+import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Scanner;
 import java.util.stream.Collectors;
@@ -22,10 +24,9 @@ public class SocialGolfer {
     static ISolver satSolver;
 
     public static void main(String[] args) {
-        mainMenu();
+        mainProgram();
     }
 
-     // Generate all the required SAT clauses
     static void genAllClauses() {
         genClause1();
         genClause2();
@@ -42,16 +43,41 @@ public class SocialGolfer {
     // Each golfer plays at least once a week
     static void genClause1() {
         for (int i = 1; i <= x; i++) {
-            for (int l = 1; l <= w; l++) {
-                List<Integer> loo = new ArrayList<>();
-                for (int j = 1; j <= p; j++) {
-                    for (int k = 1; k <= g; k++) {
-                        loo.add(getVariable(i, j, k, l));
-                    }
-                }
-                addClause(loo);
+            List<Integer> loo = new ArrayList<>();
+            
+            // Binary encoding for each variable Xi
+            List<Integer> binaryRepresentation = convertToBinary(i);
+
+            // Create k new variables Y1, Y2, ..., Yk
+            for (int j = 0; j < binaryRepresentation.size(); j++) {
+                loo.add(getVariable(i, 1, j + 1, 1));
             }
+
+            for (int j = 0; j < binaryRepresentation.size(); j++) {
+                if (binaryRepresentation.get(j) == 1) {
+                    loo.add(getVariable(i, 1, j + 1, 1));
+                } else {
+                    loo.add(-getVariable(i, 1, j + 1, 1));
+                }
+            }
+
+            addClause(loo);
         }
+    }
+
+    // Function to convert an integer to its binary representation
+    static List<Integer> convertToBinary(int num) {
+        List<Integer> binaryRepresentation = new ArrayList<>();
+
+        while (num > 0) {
+            binaryRepresentation.add(num % 2);
+            num /= 2;
+        }
+
+        // Reverse the list to get the correct binary representation
+        Collections.reverse(binaryRepresentation);
+
+        return binaryRepresentation;
     }
 
     // Each golfer plays at most once in each group in each week
@@ -92,7 +118,7 @@ public class SocialGolfer {
         }
     }
 
-    // Each player plays in each group in each week
+    // Each group has at least p players
     static void genClause4() {
         for (int l = 1; l <= w; l++) {
             for (int k = 1; k <= g; k++) {
@@ -107,7 +133,7 @@ public class SocialGolfer {
         }
     }
 
-    // No player plays in the same group in the same week
+    // Each group has at most p players
     static void genClause5() {
         for (int l = 1; l <= w; l++) {
             for (int k = 1; k <= g; k++) {
@@ -125,7 +151,7 @@ public class SocialGolfer {
         }
     }
 
-    // Combine two sets of variables, ijkl and ikl
+    // This is a clause combining two sets of variables, ijkl and ikl
     static void genClause6() {
         for (int i = 1; i <= x; i++) {
             for (int k = 1; k <= g; k++) {
@@ -145,7 +171,8 @@ public class SocialGolfer {
         }
     }
 
-    // If two players m and n play in the same group k in week l, they cannot play together in any group together in future weeks
+    // If two players m and n play in the same group k in week l, they cannot play
+    // together in any group together in future weeks
     static void genClause7() {
         for (int l = 1; l <= w; l++) {
             for (int k = 1; k <= g; k++) {
@@ -230,7 +257,6 @@ public class SocialGolfer {
         return i + (x * k) + (l * x * g) + 1 + (x * p * g * w);
     }
 
-    // Resolve the SAT variable to its original representation
     static int resolveVariable(int v) {
         for (int l = 1; l <= w; l++) {
             for (int k = 1; k <= g; k++) {
@@ -258,11 +284,10 @@ public class SocialGolfer {
         
         return 0;
     }
-
+    
     static long startTime;
     static List<List<Integer>> allClauses = new ArrayList<>();
 
-    // Add a clause to the SAT solver
     static void addClause(List<Integer> clause) {
         int[] array = clause.stream().mapToInt(i -> i).toArray();
         try {
@@ -279,22 +304,26 @@ public class SocialGolfer {
 
     static void solveSatProblem() {
         x = p * g;
-
+    
         System.out.println("\nGenerating the problem.");
-
+    
         satSolver = SolverFactory.newDefault();
         satSolver.setTimeout(timeBudget);
+        
+        // Thêm dòng này để reset solver
+        satSolver.reset();
+    
         genAllClauses();
-
+    
         startTime = System.currentTimeMillis();
         System.out.println("Clauses: " + satSolver.nConstraints());
         System.out.println("Variables: " + satSolver.nVars());
     
         System.out.println("\nSearching for a solution.");
-
+    
         Thread timer = new Thread(() -> interrupt(satSolver));
         timer.start();
-
+    
         boolean satStatus;
         try {
             satStatus = satSolver.isSatisfiable();
@@ -320,31 +349,45 @@ public class SocialGolfer {
                         }
                     }
                 }
-
                 List<Integer>[][] finalResult = processResults(result);
                 showResults(finalResult);
-                
-                // Write output.cnf
+
+                // Ghi ra file CNF
                 try {
-                    FileWriter writer = new FileWriter("output.cnf");
+                    String directoryPath = "input_v1";
+                    
+                    // Tạo thư mục nếu nó không tồn tại
+                    File directory = new File(directoryPath);
+                    if (!directory.exists()) {
+                        directory.mkdir();
+                    }
+
+                    // Tạo FileWriter với đường dẫn đầy đủ đến file "result.cnf" trong thư mục "input_v1"
+                    FileWriter writer = new FileWriter(directoryPath + "/result.cnf");
+
+                    // Ghi dòng thông tin về số biến và số ràng buộc
                     writer.write("p cnf " + satSolver.nVars() + " " + satSolver.nConstraints() + "\n");
+
+                    // Ghi từng mệnh đề vào file
                     for (List<Integer> clause : allClauses) {
                         for (int literal : clause) {
                             writer.write(literal + " ");
                         }
                         writer.write("0\n");
                     }
+
+                    // Đóng FileWriter
                     writer.close();
-                    System.out.println("CNF written to output.cnf");
+
+                    System.out.println("CNF written to input_v1/result.cnf");
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
             }
         }
-            new Scanner(System.in).nextLine(); // Wait for Enter key
+        new Scanner(System.in).nextLine(); // Wait for Enter key
     }
 
-    // Process the SAT solver results into a readable format
     static List<Integer>[][] processResults(List<Integer> result) {
         List<Integer>[][] ntab = new List[w + 1][g + 1];
     
@@ -370,30 +413,59 @@ public class SocialGolfer {
     
         return ntab;
     }
-
-    // Display the final results
+    
     static void showResults(List<Integer>[][] result) {
         System.out.println("\nResult:");
-        System.out.print("Week");
+
+        // Print header
+        System.out.print("+------+");
         for (int group = 1; group <= g; group++) {
-            System.out.print("\tGroup " + group);
+            System.out.print("-----------+");
         }
         System.out.println();
+
+        System.out.print("| Week |");
+        for (int group = 1; group <= g; group++) {
+            System.out.printf(" Group %-2d  |", group);
+        }
+        System.out.println();
+
+        // Print separator
+        System.out.print("+------+");
+        for (int group = 1; group <= g; group++) {
+            System.out.print("-----------+");
+        }
+        System.out.println();
+
+        // Print data
         for (int week = 1; week <= w; week++) {
-            System.out.print(week);
+            System.out.printf("| %-4d |", week);
+
             for (int group = 1; group <= g; group++) {
-                System.out.print("\t");
+                System.out.print(" ");
+
                 List<Integer> players = result[week][group];
                 if (players != null) {
                     String playerList = players.stream().map(Object::toString).collect(Collectors.joining(", "));
-                    System.out.print(playerList);
+                    System.out.printf("%-10s", playerList);
+                } else {
+                    System.out.print("           ");
                 }
+
+                System.out.print("|");
             }
             System.out.println();
         }
-    }
 
-    // Change the time budget for SAT solving
+        // Print bottom border
+        System.out.print("+------+");
+        for (int group = 1; group <= g; group++) {
+            System.out.print("-----------+");
+        }
+        System.out.println();
+    }
+    
+
     static void changeTimeBudget() {
         Scanner scanner = new Scanner(System.in);
         while (true) {
@@ -414,59 +486,38 @@ public class SocialGolfer {
         }
     }
 
-    static void mainMenu() {
-        Scanner scanner = new Scanner(System.in);
-        while (true) {
-            try {
-                System.out.println("\n--------------------------------");
-                System.out.println("| Social Golfer Problem Solver |");
-                System.out.println("--------------------------------");
-                System.out.println("1 - Solve the Social Golfer problem");
-                System.out.println("2 - Change time limit (current: " + timeBudget + "s)");
-                System.out.println("0 - Exit");
-                int choice = Integer.parseInt(scanner.nextLine());
-                if (choice == 1) {
-                    menu();
-                } else if (choice == 2) {
-                    changeTimeBudget();
-                } else if (choice == 0) {
-                    return;
-                }
-            } catch (NumberFormatException e) {
-                System.out.println("Please enter a valid value\n");
-                continue;
-            }
-        }
-    }
+    static void mainProgram() {
+        // Đọc input từ file input.txt
+        try {
+            // Đọc input từ file input.txt
+            File inputFile = new File("input.txt");
+            Scanner fileScanner = new Scanner(inputFile);
 
-    static void menu() {
-        Scanner scanner = new Scanner(System.in);
-        while (true) {
-            try {
-                System.out.print("Enter the number of weeks: ");
-                w = Integer.parseInt(scanner.nextLine());
-                if (w <= 0) {
-                    System.out.println("Please enter a valid value\n");
-                    continue;
-                }
-                System.out.print("Enter the number of players per group: ");
-                p = Integer.parseInt(scanner.nextLine());
-                if (p <= 0) {
-                    System.out.println("Please enter a valid value\n");
-                    continue;
-                }
-                System.out.print("Enter the number of groups: ");
-                g = Integer.parseInt(scanner.nextLine());
-                if (g <= 0) {
-                    System.out.println("Please enter a valid value\n");
-                    continue;
-                }
-            } catch (NumberFormatException e) {
-                System.out.println("Please enter a valid value\n");
-                continue;
+            while (fileScanner.hasNext()) {
+                // Đặt lại giá trị của các biến cốt lỗi
+                allClauses.clear();
+                satSolver = null;
+                startTime = 0;
+
+                // Đọc các giá trị từ file cho mỗi trường hợp
+                w = fileScanner.nextInt();
+                p = fileScanner.nextInt();
+                g = fileScanner.nextInt();
+
+                // Hiển thị thông tin từ input
+                System.out.println("\nNumber of weeks: " + w);
+                System.out.println("Number of players per group: " + p);
+                System.out.println("Number of groups: " + g);
+
+                // Gọi hàm giải quyết bài toán
+                solveSatProblem();
             }
-            break;
+
+            // Đóng file scanner
+            fileScanner.close();
+
+        } catch (IOException e) {
+            System.out.println("Error reading input from file: " + e.getMessage());
         }
-        solveSatProblem();
     }
 }
